@@ -341,7 +341,8 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
       if (
         prevNode != null &&
         (!GraphUtils.isEqual(prevNode.node, node) ||
-          (selectedNode.node !== prevSelectedNode.node &&
+          (prevSelectedNode &&
+            selectedNode.node !== prevSelectedNode.node &&
             ((selectedNode.node &&
               node[nodeKey] === selectedNode.node[nodeKey]) ||
               (prevSelectedNode.node &&
@@ -1217,7 +1218,9 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
         onNodeSelected={this.handleNodeSelected}
         renderNode={renderNode}
         renderNodeText={renderNodeText}
-        isSelected={this.state.selectedNodeObj.node === node}
+        isSelected={
+          this.state.selectedNodeObj && this.state.selectedNodeObj.node === node
+        }
         layoutEngine={this.layoutEngine}
         viewWrapperElem={this.viewWrapper.current}
         centerNodeOnMove={this.props.centerNodeOnMove}
