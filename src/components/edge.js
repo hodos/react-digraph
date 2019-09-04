@@ -422,6 +422,22 @@ class Edge extends React.Component<IEdgeProps> {
       return response;
     }
 
+    const foreignObject = nodeElem.querySelector('foreignObject');
+
+    if (foreignObject != null) {
+      // we assume that foreignObject is a rectangle, this might need to be revisited in future
+      return {
+        ...response,
+        ...Edge.getRotatedRectIntersect(
+          foreignObject,
+          src,
+          trg,
+          includesArrow,
+          viewWrapperElem
+        ),
+      };
+    }
+
     const trgNode = nodeElem.querySelector(`use.node`);
 
     // the test for trgNode.getAttributeNS makes sure we really have a node and not some other type of object

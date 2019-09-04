@@ -49,7 +49,6 @@ type IGraphViewState = {
   edgesMap: any,
   nodes: any[],
   edges: any[],
-  selectingNode: boolean,
   hoveredNodeData: INode | null,
   edgeEndNode: INode | null,
   draggingEdge: boolean,
@@ -177,7 +176,6 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
       nodesMap: {},
       selectedEdgeObj: null,
       selectedNodeObj: null,
-      selectingNode: false,
       documentClicked: false,
       svgClicked: false,
       focused: true,
@@ -202,9 +200,7 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
     d3.select(this.viewWrapper.current)
       .on('touchstart', this.containZoom)
       .on('touchmove', this.containZoom)
-      .on('click', this.handleSvgClicked) // handle element click in the element components
-      .select('svg')
-      .call(this.zoom);
+      .on('click', this.handleSvgClicked); // handle element click in the element components
 
     this.selectedView = d3.select(this.view);
 
@@ -259,7 +255,9 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
     } = this.state;
     const { layoutEngineType } = this.props;
 
-    if (layoutEngineType && LayoutEngines[layoutEngineType]) {
+    const forceReRender = prevProps.layoutEngineType !== layoutEngineType;
+
+    if (forceReRender && layoutEngineType && LayoutEngines[layoutEngineType]) {
       this.layoutEngine = new LayoutEngines[layoutEngineType](this.props);
       const newNodes = this.layoutEngine.adjustNodes(nodes, nodesMap);
 
@@ -267,8 +265,6 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
         nodes: newNodes,
       });
     }
-
-    const forceReRender = prevProps.layoutEngineType !== layoutEngineType;
 
     // Note: the order is intentional
     // remove old edges
@@ -613,12 +609,7 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
   };
 
   handleSvgClicked = (d: any, i: any) => {
-    const {
-      onBackgroundClick,
-      onSelectNode,
-      readOnly,
-      onCreateNode,
-    } = this.props;
+    const { onBackgroundClick, readOnly, onCreateNode } = this.props;
 
     if (this.isPartOfEdge(d3.event.target)) {
       this.handleEdgeSelected(d3.event);
@@ -626,39 +617,22 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
       return; // If any part of the edge is clicked, return
     }
 
-    if (this.state.selectingNode) {
-      this.setState({
-        focused: true,
-        selectingNode: false,
-        svgClicked: true,
-      });
-    } else {
-      if (!d3.event.shiftKey && onBackgroundClick) {
-        const xycoords = d3.mouse(d3.event.target);
+    if (!d3.event.shiftKey && onBackgroundClick) {
+      const xycoords = d3.mouse(d3.event.target);
 
-        onBackgroundClick(xycoords[0], xycoords[1], d3.event);
-      }
+      onBackgroundClick(xycoords[0], xycoords[1], d3.event);
+    }
 
-      const previousSelection =
-        (this.state.selectedNodeObj && this.state.selectedNodeObj.node) || null;
+    // de-select the current selection
+    this.setState({
+      focused: true,
+      svgClicked: true,
+    });
 
-      // de-select the current selection
-      this.setState({
-        selectedNodeObj: null,
-        focused: true,
-        svgClicked: true,
-      });
-      onSelectNode(null);
+    if (!readOnly && d3.event.shiftKey) {
+      const xycoords = d3.mouse(d3.event.target);
 
-      if (previousSelection) {
-        this.syncRenderNode(previousSelection);
-      }
-
-      if (!readOnly && d3.event.shiftKey) {
-        const xycoords = d3.mouse(d3.event.target);
-
-        onCreateNode(xycoords[0], xycoords[1], d3.event);
-      }
+      onCreateNode(xycoords[0], xycoords[1], d3.event);
     }
   };
 
@@ -1218,13 +1192,14 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
         onNodeSelected={this.handleNodeSelected}
         renderNode={renderNode}
         renderNodeText={renderNodeText}
-        isSelected={
-          this.state.selectedNodeObj && this.state.selectedNodeObj.node === node
-        }
+        isSelected={this.state.selectedNodeObj.node === node}
         layoutEngine={this.layoutEngine}
         viewWrapperElem={this.viewWrapper.current}
         centerNodeOnMove={this.props.centerNodeOnMove}
         maxTitleChars={maxTitleChars}
+        scale={
+          this.state.viewTransform != null ? this.state.viewTransform.k : 1
+        }
       />
     );
   };
