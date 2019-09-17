@@ -151,6 +151,10 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
   constructor(props: IGraphViewProps) {
     super(props);
 
+    this.panState = {
+      panning: false,
+      requestId: null,
+    };
     this.nodeTimeouts = {};
     this.edgeTimeouts = {};
     this.renderNodesTimeout = null;
@@ -188,6 +192,7 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
     // TODO: can we target the element rather than the document?
     document.addEventListener('keydown', this.handleWrapperKeydown);
     document.addEventListener('click', this.handleDocumentClick);
+    document.addEventListener('mouseup', () => this.handlePanEnd());
 
     this.zoom = d3
       .zoom()
@@ -1471,6 +1476,8 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
           />
           <g className="view" ref={el => (this.view = el)}>
             <Background
+              onMouseDown={event => this.handlePanStart(event)}
+              onMouseMove={event => this.handlePan(event)}
               gridSize={gridSize}
               backgroundFillId={backgroundFillId}
               renderBackground={renderBackground}
@@ -1485,6 +1492,44 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
         />
       </div>
     );
+  }
+
+  handlePanStart(event: any) {
+    const { clientX, clientY } = event;
+
+    this.panState = { clientX, clientY, requestId: null, panning: true };
+  }
+
+  handlePan(event: any) {
+    if (!this.panState.panning) {
+      return;
+    }
+
+    if (this.panState.requestId != null) {
+      cancelAnimationFrame(this.panState.requestId);
+    }
+
+    const { viewTransform } = this.state;
+    const k = viewTransform.k || 1;
+    const { clientX, clientY } = event;
+
+    this.panState.requestId = requestAnimationFrame(() => {
+      const offX = clientX - this.panState.clientX + this.state.viewTransform.x;
+      const offY = clientY - this.panState.clientY + this.state.viewTransform.y;
+
+      this.panState = {
+        ...this.panState,
+        clientX,
+        clientY,
+        requestId: null,
+      };
+
+      this.setZoom(k, offX, offY, 0);
+    });
+  }
+
+  handlePanEnd() {
+    this.panState.panning = false;
   }
 
   /* Imperative API */
