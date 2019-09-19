@@ -120,7 +120,7 @@
     "precommit": "lint-staged && npm run test",
     "prefast-test": "npm run prepublish",
     "prepublish": "npm run package",
-    "prepare": "npm run package",
+    "preinstall": "npm run package",
     "serve": "npm run live-serve",
     "test": "jest",
     "test:debug": "node --inspect node_modules/.bin/jest --watch --runInBand",
