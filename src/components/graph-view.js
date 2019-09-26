@@ -20,7 +20,6 @@ import * as React from 'react';
 import ReactDOM from 'react-dom';
 import '../styles/main.scss';
 
-import { LayoutEngines } from '../utilities/layout-engine/layout-engine-config';
 import { type IGraphViewProps } from './graph-view-props';
 import Background from './background';
 import Defs from './defs';
@@ -68,7 +67,6 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
     canDeleteNode: () => true,
     edgeArrowSize: 8,
     gridSpacing: 36,
-    layoutEngineType: 'None',
     maxZoom: 1.5,
     minZoom: 0.15,
     nodeSize: 154,
@@ -102,15 +100,8 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
         : null;
 
     // Handle layoutEngine on initial render
-    if (
-      prevState.nodes.length === 0 &&
-      nextProps.layoutEngineType &&
-      LayoutEngines[nextProps.layoutEngineType]
-    ) {
-      const layoutEngine = new LayoutEngines[nextProps.layoutEngineType](
-        nextProps
-      );
-      const newNodes = layoutEngine.adjustNodes(nodes, nodesMap);
+    if (prevState.nodes.length === 0 && nextProps.layoutEngine) {
+      const newNodes = nextProps.layoutEngine.adjustNodes(nodes, nodesMap);
 
       nodes = newNodes;
     }
@@ -162,10 +153,6 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
     this.viewWrapper = React.createRef();
     this.graphControls = React.createRef();
     this.graphSvg = React.createRef();
-
-    if (props.layoutEngineType) {
-      this.layoutEngine = new LayoutEngines[props.layoutEngineType](props);
-    }
 
     this.state = {
       componentUpToDate: false,
@@ -242,7 +229,7 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
       !nextState.componentUpToDate ||
       nextProps.selected !== this.props.selected ||
       nextProps.readOnly !== this.props.readOnly ||
-      nextProps.layoutEngineType !== this.props.layoutEngineType
+      nextProps.layoutEngine !== this.props.layoutEngine
     ) {
       return true;
     }
@@ -258,13 +245,12 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
       selectedNodeObj,
       selectedEdgeObj,
     } = this.state;
-    const { layoutEngineType } = this.props;
+    const { layoutEngine } = this.props;
 
-    const forceReRender = prevProps.layoutEngineType !== layoutEngineType;
+    const forceReRender = prevProps.layoutEngine !== layoutEngine;
 
-    if (forceReRender && layoutEngineType && LayoutEngines[layoutEngineType]) {
-      this.layoutEngine = new LayoutEngines[layoutEngineType](this.props);
-      const newNodes = this.layoutEngine.adjustNodes(nodes, nodesMap);
+    if (forceReRender && layoutEngine) {
+      const newNodes = layoutEngine.adjustNodes(nodes, nodesMap);
 
       this.setState({
         nodes: newNodes,
@@ -1198,7 +1184,7 @@ class GraphView extends React.Component<IGraphViewProps, IGraphViewState> {
         renderNode={renderNode}
         renderNodeText={renderNodeText}
         isSelected={this.state.selectedNodeObj.node === node}
-        layoutEngine={this.layoutEngine}
+        layoutEngine={this.props.layoutEngine}
         viewWrapperElem={this.viewWrapper.current}
         centerNodeOnMove={this.props.centerNodeOnMove}
         maxTitleChars={maxTitleChars}
